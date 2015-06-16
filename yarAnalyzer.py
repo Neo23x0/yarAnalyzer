@@ -432,7 +432,7 @@ if __name__ == '__main__':
     # Parse Arguments
     parser = argparse.ArgumentParser(description='yarAnalyzer - Yara Rules Statistics and Analysis')
     parser.add_argument('-p', help='Path to scan', metavar='path', default='C:\\', required=True)
-    parser.add_argument('-i', help='Set an identifier - will be used in filename %identifier%_rule_stats.csv and %identifier_file_stats.csv', metavar='identifier', default='yarAnalyzer')
+    parser.add_argument('-i', help='Set an identifier - will be used in filename identifier_rule_stats.csv and identifier_file_stats.csv', metavar='identifier', default='yarAnalyzer')
     parser.add_argument('-m', help='Max file size in MB (default=10)', metavar='max-size', default=10)
     parser.add_argument('-l', help='Max filename/rulename string length in command line output', metavar='max-string', default=30)
     parser.add_argument('-f', help='Number of first bytes to show in output', metavar='first-bytes', default=6)
