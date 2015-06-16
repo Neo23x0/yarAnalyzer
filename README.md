@@ -6,7 +6,7 @@ yarAnalyzer creates statistics on a yara rule set and files in a sample director
 
 ```yarAnalyzer.py -p /sample/path```
 
-It will generate two tables as command line output and two CSV files. 
+It will generate two tables as command line output and two CSV files. (yaranalyzer_file_stats.csv, yaranalyzer_rule_stats.csv)
 
 # Screenshots
 
