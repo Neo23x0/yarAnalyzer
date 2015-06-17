@@ -53,7 +53,7 @@ def scan_path(path, rule_sets, num_first_bytes=6):
 
                 # Prepare the file matches
                 file_stats[relPath] = {}
-                file_stats[relPath]["matches"] = []
+                file_stats[relPath]["matches"] = {}
                 file_stats[relPath]["size"] = fileSize
 
                 # Set fileData to an empty value
@@ -110,13 +110,13 @@ def scan_path(path, rule_sets, num_first_bytes=6):
                                         description = match.meta['description']
 
                                 # Matching strings
-                                #matched_strings = ""
-                                #if hasattr(match, 'strings'):
-                                #    # Get matching strings
-                                #    matched_strings = getStringMatches(match.strings)
+                                matched_strings = ""
+                                if hasattr(match, 'strings'):
+                                    # Get matching strings
+                                    matched_strings = get_string_matches(match.strings)
 
                                 # Add the stats
-                                file_stats[relPath]["matches"].append(match.rule)
+                                file_stats[relPath]["matches"][match.rule] = matched_strings
                                 rule_stats[match.rule]["files"].append(relPath)
 
                 except Exception, e:
@@ -152,6 +152,35 @@ def generate_hashes(filedata):
     except Exception, e:
         traceback.print_exc()
         return 0, 0, 0
+
+
+def get_string_matches(strings):
+    try:
+        string_matches = []
+        matching_strings = ""
+        for string in strings:
+            # print string
+            extract = string[2]
+            if not extract in string_matches:
+                string_matches.append(extract)
+
+        string_num = 1
+        for string in string_matches:
+            # UNICDOE
+            if '\0' in string:
+                matching_strings += " Str" + str(string_num) + "(U): " + remove_non_ascii(remove_binary_zero(string))
+            else:
+            # ASCII
+                matching_strings += " Str" + str(string_num) + "(A): " + remove_non_ascii(remove_binary_zero(string))
+            string_num += 1
+
+        # Limit string
+        if len(matching_strings) > 140:
+            matching_strings = matching_strings[:140] + " ... (truncated)"
+
+        return matching_strings.lstrip(" ")
+    except:
+        traceback.print_exc()
 
 
 def walk_error(err):
@@ -287,20 +316,6 @@ def remove_non_ascii(string, stripit=False):
     return nonascii
 
 
-def remove_non_asciiDrop(string):
-    nonascii = "error"
-    #print "CON: ", string
-    try:
-        # Generate a new string without disturbing characters
-        nonascii = "".join(i for i in string if ord(i)<127 and ord(i)>31)
-
-    except Exception, e:
-        traceback.print_exc()
-        pass
-    #print "NON: ", nonascii
-    return nonascii
-
-
 def get_platform_full():
     type_info = ""
     try:
@@ -366,7 +381,7 @@ def save_stats(no_empty=False, identifier="yarAnalyzer"):
 
     with open("{0}_file_stats.csv".format(identifier), "w") as f_file:
 
-        f_file.write("File;Size;First Bytes in Hex;First Bytes in ASCII;MD5;SHA1;SHA256;Rule Match\n")
+        f_file.write("File;Size;First Bytes in Hex;First Bytes in ASCII;MD5;SHA1;SHA256;Rule Match;Matched Strings\n")
 
         for relPath in file_stats:
 
@@ -376,14 +391,16 @@ def save_stats(no_empty=False, identifier="yarAnalyzer"):
             try:
                 # Write the line
                 for rule in file_stats[relPath]["matches"]:
-                    f_file.write("{0};{1};{2};{3};{4};{5};{6};{7}\n".format(relPath,
+                    matched_strings = file_stats[relPath]["matches"][rule]
+                    f_file.write("{0};{1};{2};{3};{4};{5};{6};{7};{8}\n".format(relPath,
                                                                             file_stats[relPath]["size"],
                                                                             file_stats[relPath]["firstBytes_Hex"],
                                                                             file_stats[relPath]["firstBytes_Ascii"],
                                                                             file_stats[relPath]["md5"],
                                                                             file_stats[relPath]["sha1"],
                                                                             file_stats[relPath]["sha256"],
-                                                                            rule
+                                                                            rule,
+                                                                            matched_strings
                                                                             ))
             except Exception,e:
                 print "Error while formatting line - skipping it - CSV results may be incomplete"
@@ -410,24 +427,22 @@ def save_stats(no_empty=False, identifier="yarAnalyzer"):
             except Exception,e:
                 print "Error while formatting line - skipping it - CSV results may be incomplete"
 
+
 def print_welcome():
     print "======================================================================="
     print "  "
     print "  yarAnalyzer"
     print "  "
-    print "  (C) Florian Roth"
+    print "  (c) Florian Roth"
     print "  June 2015"
-    print "  Version 0.2"
+    print "  Version 0.3"
     print "  "
     print "======================================================================="
     print "  "
 
+
 # MAIN ################################################################
 if __name__ == '__main__':
-
-    # Stats --------------------------------------------------------
-    rule_stats = {}
-    file_stats = {}
 
     # Parse Arguments
     parser = argparse.ArgumentParser(description='yarAnalyzer - Yara Rules Statistics and Analysis')
@@ -454,7 +469,10 @@ if __name__ == '__main__':
     # Compile Yara Rules
     yara_rules = initialize_yara_rules(args.s, args.e)
 
-    # Generate Stats Structure for Rules
+    # Generate Stats Structure ----------------------------------------
+    # Global vars that will be filled and read during report generation
+    rule_stats = {}
+    file_stats = {}
     generate_yara_stats_structure(yara_rules)
 
     # Scan Path -------------------------------------------------------
