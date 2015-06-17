@@ -161,14 +161,14 @@ def walk_error(err):
         traceback.print_exc()
 
 
-def initialize_yara_rules():
+def initialize_yara_rules(rules_path, rules_extension):
 
     yara_rules = []
     filename_dummy = ""
     filepath_dummy = ""
 
     try:
-        for root, directories, files in scandir.walk(os.path.join(get_application_path(), "./signatures"), onerror=walk_error, followlinks=False):
+        for root, directories, files in scandir.walk(rules_path, onerror=walk_error, followlinks=False):
             for file in files:
                 try:
 
@@ -183,7 +183,7 @@ def initialize_yara_rules():
                     extension = os.path.splitext(file)[1].lower()
 
                     # Encrypted
-                    if extension == ".yar":
+                    if extension == ".{0}".format(rules_extension):
                         try:
                             compiledRules = yara.compile(yaraRuleFile, externals= {
                                                               'filename': filename_dummy,
@@ -417,7 +417,7 @@ def print_welcome():
     print "  "
     print "  (C) Florian Roth"
     print "  June 2015"
-    print "  Version 0.1"
+    print "  Version 0.2"
     print "  "
     print "======================================================================="
     print "  "
@@ -432,6 +432,8 @@ if __name__ == '__main__':
     # Parse Arguments
     parser = argparse.ArgumentParser(description='yarAnalyzer - Yara Rules Statistics and Analysis')
     parser.add_argument('-p', help='Path to scan', metavar='path', default='C:\\', required=True)
+    parser.add_argument('-s', help='Path to signature files', metavar='sigpath', default="{0}".format(os.path.join(get_application_path(), './signatures')))
+    parser.add_argument('-e', help='signature extension', metavar='ext', default='yar')
     parser.add_argument('-i', help='Set an identifier - will be used in filename identifier_rule_stats.csv and identifier_file_stats.csv', metavar='identifier', default='yarAnalyzer')
     parser.add_argument('-m', help='Max file size in MB (default=10)', metavar='max-size', default=10)
     parser.add_argument('-l', help='Max filename/rulename string length in command line output', metavar='max-string', default=30)
@@ -450,7 +452,7 @@ if __name__ == '__main__':
         t_hostname = os.uname()[1]
 
     # Compile Yara Rules
-    yara_rules = initialize_yara_rules()
+    yara_rules = initialize_yara_rules(args.s, args.e)
 
     # Generate Stats Structure for Rules
     generate_yara_stats_structure(yara_rules)

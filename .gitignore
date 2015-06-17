@@ -1,0 +1,10 @@
+
+yarAnalyzer_file_stats.csv
+
+yarAnalyzer_rule_stats.csv
+
+signatures/cn_webshells.yar
+
+signatures/cn_hacktool_scripts.yar
+
+signatures/cn_hacktools.yar
