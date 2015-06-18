@@ -377,16 +377,22 @@ def pretty_print(no_empty=False, max_string=26):
     print x
 
 
-def save_stats(no_empty=False, identifier="yarAnalyzer"):
+def save_stats(no_empty=False, identifier="yarAnalyzer", excel_patch=False):
 
     with open("{0}_file_stats.csv".format(identifier), "w") as f_file:
 
-        f_file.write("File;Size;First Bytes in Hex;First Bytes in ASCII;MD5;SHA1;SHA256;Rule Match;Matched Strings\n")
+        f_file.write("File;Extension;Size;First Bytes in Hex;First Bytes in ASCII;MD5;SHA1;SHA256;Rule Match;Matched Strings\n")
 
         for relPath in file_stats:
 
             if no_empty and len(file_stats[relPath]["matches"]) < 1:
                 continue
+
+            # Extension
+            extension = os.path.splitext(relPath)[1].lower()
+
+            # Excel Patch
+            excel_addon = "=" if excel_patch else ""
 
             # Write the line
             try:
@@ -394,7 +400,8 @@ def save_stats(no_empty=False, identifier="yarAnalyzer"):
                 if len(file_stats[relPath]["matches"]) > 0:
                     for rule in file_stats[relPath]["matches"]:
                         matched_strings = file_stats[relPath]["matches"][rule]
-                        f_file.write("{0};{1};{2};{3};{4};{5};{6};{7};{8}\n".format(relPath,
+                        f_file.write("{0};{1};{2};{10}\"{3}\";{10}\"{4}\";{5};{6};{7};{8};{10}\"{9}\"\n".format(relPath,
+                                                                                extension,
                                                                                 file_stats[relPath]["size"],
                                                                                 file_stats[relPath]["firstBytes_Hex"],
                                                                                 file_stats[relPath]["firstBytes_Ascii"],
@@ -402,11 +409,13 @@ def save_stats(no_empty=False, identifier="yarAnalyzer"):
                                                                                 file_stats[relPath]["sha1"],
                                                                                 file_stats[relPath]["sha256"],
                                                                                 rule,
-                                                                                matched_strings
+                                                                                matched_strings,
+                                                                                excel_addon
                                                                                 ))
                 # Files with no matches
                 else:
-                    f_file.write("{0};{1};{2};{3};{4};{5};{6};{7};{8}\n".format(relPath,
+                    f_file.write("{0};{1};{2};{10}\"{3}\";{10}\"{4}\";{5};{6};{7};{8};{10}\"{9}\"\n".format(relPath,
+                                                                            extension,
                                                                             file_stats[relPath]["size"],
                                                                             file_stats[relPath]["firstBytes_Hex"],
                                                                             file_stats[relPath]["firstBytes_Ascii"],
@@ -414,7 +423,8 @@ def save_stats(no_empty=False, identifier="yarAnalyzer"):
                                                                             file_stats[relPath]["sha1"],
                                                                             file_stats[relPath]["sha256"],
                                                                             "-",
-                                                                            "-"
+                                                                            "-",
+                                                                            excel_addon
                                                                             ))
 
             except Exception,e:
@@ -456,7 +466,7 @@ def print_welcome():
     print "  "
     print "  (c) Florian Roth"
     print "  June 2015"
-    print "  Version 0.3.1"
+    print "  Version 0.3.2"
     print "  "
     print "======================================================================="
     print "  "
@@ -474,6 +484,7 @@ if __name__ == '__main__':
     parser.add_argument('-m', help='Max file size in MB (default=10)', metavar='max-size', default=10)
     parser.add_argument('-l', help='Max filename/rulename string length in command line output', metavar='max-string', default=30)
     parser.add_argument('-f', help='Number of first bytes to show in output', metavar='first-bytes', default=6)
+    parser.add_argument('--excel', action='store_true', default=False, help='Add extras to suppress automatic conversion in Microsoft Excel')
     parser.add_argument('--noempty', action='store_true', default=False, help='Don\'t show empty values')
     parser.add_argument('--printAll', action='store_true', help='Print all files that are scanned', default=False)
     parser.add_argument('--debug', action='store_true', default=False, help='Debug output')
@@ -501,4 +512,4 @@ if __name__ == '__main__':
 
     # Result ----------------------------------------------------------
     pretty_print(args.noempty, args.l)
-    save_stats(args.noempty, args.i)
+    save_stats(args.noempty, args.i, args.excel)
