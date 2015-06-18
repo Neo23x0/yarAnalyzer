@@ -388,10 +388,24 @@ def save_stats(no_empty=False, identifier="yarAnalyzer"):
             if no_empty and len(file_stats[relPath]["matches"]) < 1:
                 continue
 
+            # Write the line
             try:
-                # Write the line
-                for rule in file_stats[relPath]["matches"]:
-                    matched_strings = file_stats[relPath]["matches"][rule]
+                # Files with matches
+                if len(file_stats[relPath]["matches"]) > 0:
+                    for rule in file_stats[relPath]["matches"]:
+                        matched_strings = file_stats[relPath]["matches"][rule]
+                        f_file.write("{0};{1};{2};{3};{4};{5};{6};{7};{8}\n".format(relPath,
+                                                                                file_stats[relPath]["size"],
+                                                                                file_stats[relPath]["firstBytes_Hex"],
+                                                                                file_stats[relPath]["firstBytes_Ascii"],
+                                                                                file_stats[relPath]["md5"],
+                                                                                file_stats[relPath]["sha1"],
+                                                                                file_stats[relPath]["sha256"],
+                                                                                rule,
+                                                                                matched_strings
+                                                                                ))
+                # Files with no matches
+                else:
                     f_file.write("{0};{1};{2};{3};{4};{5};{6};{7};{8}\n".format(relPath,
                                                                             file_stats[relPath]["size"],
                                                                             file_stats[relPath]["firstBytes_Hex"],
@@ -399,9 +413,10 @@ def save_stats(no_empty=False, identifier="yarAnalyzer"):
                                                                             file_stats[relPath]["md5"],
                                                                             file_stats[relPath]["sha1"],
                                                                             file_stats[relPath]["sha256"],
-                                                                            rule,
-                                                                            matched_strings
+                                                                            "-",
+                                                                            "-"
                                                                             ))
+
             except Exception,e:
                 print "Error while formatting line - skipping it - CSV results may be incomplete"
 
@@ -416,14 +431,20 @@ def save_stats(no_empty=False, identifier="yarAnalyzer"):
 
             # Write the line
             try:
-                for file in rule_stats[rule]["files"]:
-                    r_file.write("{0};{1};{2};{3};{4};{5}\n".format(rule,
-                                                        len(rule_stats[rule]["files"]),
-                                                        file,
-                                                        file_stats[file]["md5"],
-                                                        file_stats[file]["sha1"],
-                                                        file_stats[file]["sha256"]
-                                                        ))
+                # Rules with matches
+                if len(rule_stats[rule]["files"]) > 0:
+                    for file in rule_stats[rule]["files"]:
+                        r_file.write("{0};{1};{2};{3};{4};{5}\n".format(rule,
+                                                            len(rule_stats[rule]["files"]),
+                                                            file,
+                                                            file_stats[file]["md5"],
+                                                            file_stats[file]["sha1"],
+                                                            file_stats[file]["sha256"]
+                                                            ))
+                # Rules without matches
+                else:
+                    r_file.write("{0};{1};{2};{3};{4};{5}\n".format(rule,len(rule_stats[rule]["files"]),"-","-","-","-"))
+
             except Exception,e:
                 print "Error while formatting line - skipping it - CSV results may be incomplete"
 
@@ -435,7 +456,7 @@ def print_welcome():
     print "  "
     print "  (c) Florian Roth"
     print "  June 2015"
-    print "  Version 0.3"
+    print "  Version 0.3.1"
     print "  "
     print "======================================================================="
     print "  "
