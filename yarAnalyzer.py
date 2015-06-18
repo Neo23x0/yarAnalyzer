@@ -69,7 +69,7 @@ def scan_path(path, rule_sets, num_first_bytes=6):
 
                 if len(fileData) > 1:
                     file_stats[relPath]["firstBytes_Hex"] = "%s" % fileData[:num_first_bytes].encode("hex")
-                    file_stats[relPath]["firstBytes_Ascii"] = "%s" % remove_non_asciiDrop(fileData[:num_first_bytes])
+                    file_stats[relPath]["firstBytes_Ascii"] = "%s" % remove_non_ascii(fileData[:num_first_bytes])
                 else:
                     file_stats[relPath]["firstBytes_Hex"] = "-"
                     file_stats[relPath]["firstBytes_Ascii"] = "-"
@@ -282,7 +282,7 @@ def log(mes_type, message):
 
     # Prepare Message
     orig_message = message
-    message = remove_non_asciiDrop(message)
+    message = remove_non_ascii(message)
 
     print "[%s]: %s" % (mes_type, message)
 
