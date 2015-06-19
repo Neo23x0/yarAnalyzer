@@ -25,20 +25,24 @@ CSV Output in Excel
 # Usage
 
 ```
-usage: yarAnalyzer.py [-h] -p path [-i identifier] [-m max-size]
-                      [-l max-string] [-f first-bytes] [--noempty]
-                      [--printAll] [--debug]
+usage: yarAnalyzer.py [-h] -p path [-s sigpath] [-e ext] [-i identifier]
+                      [-m max-size] [-l max-string] [-f first-bytes] [--excel]
+                      [--noempty] [--printAll] [--debug]
 
 yarAnalyzer - Yara Rules Statistics and Analysis
 
 optional arguments:
   -h, --help      show this help message and exit
   -p path         Path to scan
+  -s sigpath      Path to signature files
+  -e ext          signature extension
   -i identifier   Set an identifier - will be used in filename
                   identifier_rule_stats.csv and identifier_file_stats.csv
   -m max-size     Max file size in MB (default=10)
   -l max-string   Max filename/rulename string length in command line output
   -f first-bytes  Number of first bytes to show in output
+  --excel         Add extras to suppress automatic conversion in Microsoft
+                  Excel
   --noempty       Don't show empty values
   --printAll      Print all files that are scanned
   --debug         Debug output
