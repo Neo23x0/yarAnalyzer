@@ -190,50 +190,66 @@ def walk_error(err):
         traceback.print_exc()
 
 
-def initialize_yara_rules(rules_path, rules_extension):
+def initialize_yara_rules(rule_path, rules_extension):
 
     yara_rules = []
     filename_dummy = ""
     filepath_dummy = ""
 
-    try:
-        for root, directories, files in scandir.walk(rules_path, onerror=walk_error, followlinks=False):
-            for file in files:
-                try:
+    # Signature are located in a path
+    if os.path.isdir(rule_path):
+        try:
+            for root, directories, files in scandir.walk(rule_path, onerror=walk_error, followlinks=False):
+                for file in files:
+                    try:
 
-                    # Full Path
-                    yaraRuleFile = os.path.join(root, file)
+                        # Full Path
+                        yaraRuleFile = os.path.join(root, file)
 
-                    # Skip hidden, backup or system related files
-                    if file.startswith(".") or file.startswith("~") or file.startswith("_"):
-                        continue
+                        # Skip hidden, backup or system related files
+                        if file.startswith(".") or file.startswith("~") or file.startswith("_"):
+                            continue
 
-                    # Extension
-                    extension = os.path.splitext(file)[1].lower()
+                        # Extension
+                        extension = os.path.splitext(file)[1].lower()
 
-                    # Encrypted
-                    if extension == ".{0}".format(rules_extension):
-                        try:
-                            compiledRules = yara.compile(yaraRuleFile, externals= {
-                                                              'filename': filename_dummy,
-                                                              'filepath': filepath_dummy
-                                                          })
-                            yara_rules.append(compiledRules)
-                            log("INFO", "Initialized Yara rules from %s" % file)
-                        except Exception, e:
-                            log("ERROR", "Error in Yara file: %s" % file)
-                            if args.debug:
-                                traceback.print_exc()
+                        # Encrypted
+                        if extension == ".{0}".format(rules_extension):
+                            try:
+                                compiledRules = yara.compile(yaraRuleFile, externals= {
+                                                                  'filename': filename_dummy,
+                                                                  'filepath': filepath_dummy
+                                                              })
+                                yara_rules.append(compiledRules)
+                                log("INFO", "Initialized Yara rules from %s" % file)
+                            except Exception, e:
+                                log("ERROR", "Error in Yara file: %s" % file)
+                                if args.debug:
+                                    traceback.print_exc()
 
-                except Exception, e:
-                    log("ERROR", "Error reading signature file %s ERROR: %s" % yaraRuleFile)
-                    if args.debug:
-                        traceback.print_exc()
+                    except Exception, e:
+                        log("ERROR", "Error reading signature file %s ERROR: %s" % yaraRuleFile)
+                        if args.debug:
+                            traceback.print_exc()
 
-    except Exception, e:
-        log("ERROR", "Error reading signature folder /signatures/")
-        if args.debug:
-            traceback.print_exc()
+        except Exception, e:
+            log("ERROR", "Error reading signature folder /signatures/")
+            if args.debug:
+                traceback.print_exc()
+
+    # Is a signature file
+    else:
+        try:
+            compiledRules = yara.compile(rule_path, externals= {
+                                              'filename': filename_dummy,
+                                              'filepath': filepath_dummy
+                                          })
+            yara_rules.append(compiledRules)
+            log("INFO", "Initialized Yara rules from %s" % rule_path)
+        except Exception, e:
+            log("ERROR", "Error in Yara file: %s" % rule_path)
+            if args.debug:
+                traceback.print_exc()
 
     return yara_rules
 
@@ -466,7 +482,7 @@ def print_welcome():
     print "  "
     print "  (c) Florian Roth"
     print "  June 2015"
-    print "  Version 0.3.2"
+    print "  Version 0.3.3"
     print "  "
     print "======================================================================="
     print "  "
@@ -478,7 +494,7 @@ if __name__ == '__main__':
     # Parse Arguments
     parser = argparse.ArgumentParser(description='yarAnalyzer - Yara Rules Statistics and Analysis')
     parser.add_argument('-p', help='Path to scan', metavar='path', default='C:\\', required=True)
-    parser.add_argument('-s', help='Path to signature files', metavar='sigpath', default="{0}".format(os.path.join(get_application_path(), './signatures')))
+    parser.add_argument('-s', help='Path to signature file(s)', metavar='sigpath', default="{0}".format(os.path.join(get_application_path(), './signatures')))
     parser.add_argument('-e', help='signature extension', metavar='ext', default='yar')
     parser.add_argument('-i', help='Set an identifier - will be used in filename identifier_rule_stats.csv and identifier_file_stats.csv', metavar='identifier', default='yarAnalyzer')
     parser.add_argument('-m', help='Max file size in MB (default=10)', metavar='max-size', default=10)

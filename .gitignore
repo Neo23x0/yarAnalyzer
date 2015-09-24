@@ -8,3 +8,4 @@ signatures/cn_webshells.yar
 signatures/cn_hacktool_scripts.yar
 
 signatures/cn_hacktools.yar
+.idea/*
