@@ -360,14 +360,14 @@ def pretty_print(no_empty=False, max_string=26):
         rules = "\n".join(rule[:max_string] for rule in file_stats[relPath]["matches"])
 
         x.add_row([
-            relPath[:max_string],
+            remove_non_ascii(relPath[:max_string]),
             file_stats[relPath]["size"],
             file_stats[relPath]["firstBytes_Hex"],
             file_stats[relPath]["firstBytes_Ascii"],
             rules
         ])
 
-    print x #get_string(sortby="File")
+    print x # get_string(sortby="File")
 
     x = PrettyTable(["Rule", "Match Count", "Files"])
     x.padding_width = 1
@@ -383,7 +383,7 @@ def pretty_print(no_empty=False, max_string=26):
         rule_name = rule[:max_string]
 
         # Add line
-        files = "\n".join(file[:max_string] for file in rule_stats[rule]["files"])
+        files = "\n".join(remove_non_ascii(file[:max_string]) for file in rule_stats[rule]["files"])
 
         x.add_row([
             rule_name,
