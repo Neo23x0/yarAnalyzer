@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-1 -*-
 # -*- coding: utf-8 -*-
-#
-# yarAnalyzer
-# Yara Rule Statistics and Analysis
-#
-# Florian Roth
-#
-# DISCLAIMER - USE AT YOUR OWN RISK.
+
+"""
+yarAnalyzer
+Yara Rule Statistics and Analysis
+
+Florian Roth
+
+DISCLAIMER - USE AT YOUR OWN RISK.
+"""
+__version__ = "0.3.4"
 
 import sys
 import os
@@ -480,9 +483,9 @@ def print_welcome():
     print "  "
     print "  yarAnalyzer"
     print "  "
-    print "  (c) Florian Roth"
-    print "  June 2015"
-    print "  Version 0.3.3"
+    print "  by Florian Roth"
+    print "  October 2015"
+    print "  Version %s" % __version__
     print "  "
     print "======================================================================="
     print "  "
