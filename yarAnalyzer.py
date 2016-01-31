@@ -10,7 +10,7 @@ Florian Roth
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-__version__ = "0.3.4"
+__version__ = "0.3.5"
 
 import sys
 import os
@@ -484,7 +484,7 @@ def print_welcome():
     print "  yarAnalyzer"
     print "  "
     print "  by Florian Roth"
-    print "  October 2015"
+    print "  January 2016"
     print "  Version %s" % __version__
     print "  "
     print "======================================================================="
@@ -530,5 +530,5 @@ if __name__ == '__main__':
     scan_path(args.p, yara_rules, int(args.f))
 
     # Result ----------------------------------------------------------
-    pretty_print(args.noempty, args.l)
+    pretty_print(args.noempty, int(args.l))
     save_stats(args.noempty, args.i, args.excel)
