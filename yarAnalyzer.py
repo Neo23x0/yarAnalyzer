@@ -10,7 +10,7 @@ Florian Roth
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-__version__ = "0.3.5"
+__version__ = "0.4"
 
 import sys
 import os
@@ -119,7 +119,17 @@ def scan_path(path, rule_sets, num_first_bytes=6):
                                     matched_strings = get_string_matches(match.strings)
 
                                 # Add the stats
+                                # File Stats
+                                if relPath not in file_stats:
+                                    file_stats[relPath] = {}
+                                if "matches" not in file_stats[relPath]:
+                                    file_stats[relPath]["matches"] = {}
                                 file_stats[relPath]["matches"][match.rule] = matched_strings
+                                # Rule Stats
+                                if match.rule not in rule_stats:
+                                    rule_stats[match.rule] = {}
+                                if "files" not in rule_stats[match.rule]:
+                                    rule_stats[match.rule]["files"] = []
                                 rule_stats[match.rule]["files"].append(relPath)
 
                 except Exception, e:
@@ -195,9 +205,9 @@ def walk_error(err):
 
 def initialize_yara_rules(rule_path, rules_extension):
 
+    yara_rule_infos = {}
     yara_rules = []
-    filename_dummy = ""
-    filepath_dummy = ""
+    dummy = ""
 
     # Signature are located in a path
     if os.path.isdir(rule_path):
@@ -216,13 +226,29 @@ def initialize_yara_rules(rule_path, rules_extension):
                         # Extension
                         extension = os.path.splitext(file)[1].lower()
 
-                        # Encrypted
+                        # Compile
                         if extension == ".{0}".format(rules_extension):
                             try:
-                                compiledRules = yara.compile(yaraRuleFile, externals= {
-                                                                  'filename': filename_dummy,
-                                                                  'filepath': filepath_dummy
-                                                              })
+                                compiledRules = yara.compile(yaraRuleFile, externals={
+                                    'filename': dummy,
+                                    'filepath': dummy,
+                                    'extension': dummy,
+                                    'filetype': dummy,
+                                    'id': dummy,
+                                    'md5': dummy,
+                                })
+
+                                # Yara Rule Info - used for inventory
+                                for rule in compiledRules:
+                                    if file not in yara_rule_infos:
+                                        yara_rule_infos[file] = {}
+                                    if rule.identifier not in yara_rule_infos[file]:
+                                        yara_rule_infos[file][rule.identifier] = {}
+                                    if "description" in rule.meta:
+                                        yara_rule_infos[file][rule.identifier]["description"] = rule.meta["description"]
+                                    if "reference" in rule.meta:
+                                        yara_rule_infos[file][rule.identifier]["reference"] = rule.meta["reference"]
+
                                 yara_rules.append(compiledRules)
                                 log("INFO", "Initialized Yara rules from %s" % file)
                             except Exception, e:
@@ -244,8 +270,8 @@ def initialize_yara_rules(rule_path, rules_extension):
     else:
         try:
             compiledRules = yara.compile(rule_path, externals= {
-                                              'filename': filename_dummy,
-                                              'filepath': filepath_dummy
+                                              'filename': dummy,
+                                              'filepath': dummy
                                           })
             yara_rules.append(compiledRules)
             log("INFO", "Initialized Yara rules from %s" % rule_path)
@@ -254,7 +280,28 @@ def initialize_yara_rules(rule_path, rules_extension):
             if args.debug:
                 traceback.print_exc()
 
-    return yara_rules
+    return yara_rules, yara_rule_infos
+
+
+def generate_yara_inventory(output_file, yara_rule_infos):
+    log("INFO", "Generating Inventory")
+    try:
+        with open(output_file, 'w') as output:
+            output.write("Rule File;Rule Name;Description;Reference;Compile Issue\n")
+            for rule_file in yara_rule_infos:
+                for rule_name in yara_rule_infos[rule_file]:
+                    description = "-"
+                    reference = "-"
+                    if "description" in yara_rule_infos[rule_file][rule_name]:
+                        description = yara_rule_infos[rule_file][rule_name]["description"]
+                    if "reference" in yara_rule_infos[rule_file][rule_name]:
+                        reference = yara_rule_infos[rule_file][rule_name]["reference"]
+                    # Clean strings
+                    description = description.replace("; ", " / ").replace(";", " ")
+                    reference = reference.replace("; ", " / ").replace(";", " ")
+                    output.write("{0};{1};{2};{3};\n".format(rule_file, rule_name, description, reference))
+    except Exception, e:
+        traceback.print_exc()
 
 
 def generate_yara_stats_structure(yara_rules):
@@ -496,19 +543,27 @@ if __name__ == '__main__':
 
     # Parse Arguments
     parser = argparse.ArgumentParser(description='yarAnalyzer - Yara Rules Statistics and Analysis')
-    parser.add_argument('-p', help='Path to scan', metavar='path', default='C:\\', required=True)
+    parser.add_argument('-p', help='Path to scan', metavar='path', default='C:\\')
     parser.add_argument('-s', help='Path to signature file(s)', metavar='sigpath', default="{0}".format(os.path.join(get_application_path(), './signatures')))
     parser.add_argument('-e', help='signature extension', metavar='ext', default='yar')
     parser.add_argument('-i', help='Set an identifier - will be used in filename identifier_rule_stats.csv and identifier_file_stats.csv', metavar='identifier', default='yarAnalyzer')
     parser.add_argument('-m', help='Max file size in MB (default=10)', metavar='max-size', default=10)
     parser.add_argument('-l', help='Max filename/rulename string length in command line output', metavar='max-string', default=30)
     parser.add_argument('-f', help='Number of first bytes to show in output', metavar='first-bytes', default=6)
+    parser.add_argument('-o', help='Inventory output', metavar='output', default='yara-rule-inventory.csv')
     parser.add_argument('--excel', action='store_true', default=False, help='Add extras to suppress automatic conversion in Microsoft Excel')
     parser.add_argument('--noempty', action='store_true', default=False, help='Don\'t show empty values')
+    parser.add_argument('--inventory', action='store_true', default=False, help='Create a YARA rule inventory only')
     parser.add_argument('--printAll', action='store_true', help='Print all files that are scanned', default=False)
     parser.add_argument('--debug', action='store_true', default=False, help='Debug output')
 
     args = parser.parse_args()
+
+    # Error
+    if not args.inventory and not args.p:
+        print "[Error] At least one basic function must be used! Use either '-p' to scan a certain directory or " \
+              "'--inventory' to generate a rule inventory (of directory set with -s)."
+        parser.print_help()
 
     # Print Welcome ---------------------------------------------------
     print_welcome()
@@ -518,7 +573,12 @@ if __name__ == '__main__':
         t_hostname = os.uname()[1]
 
     # Compile Yara Rules
-    yara_rules = initialize_yara_rules(args.s, args.e)
+    yara_rules, yara_rule_infos = initialize_yara_rules(args.s, args.e)
+
+    # Inventory Only
+    if args.inventory:
+        generate_yara_inventory(args.o, yara_rule_infos)
+        sys.exit(0)
 
     # Generate Stats Structure ----------------------------------------
     # Global vars that will be filled and read during report generation

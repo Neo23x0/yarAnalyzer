@@ -9,3 +9,7 @@ signatures/cn_hacktool_scripts.yar
 
 signatures/cn_hacktools.yar
 .idea/*
+signatures/*.yar
+yara-rule-inventory.csv
+
+*.xlsx
