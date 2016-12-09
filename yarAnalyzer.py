@@ -10,7 +10,7 @@ Florian Roth
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-__version__ = "0.4"
+__version__ = "0.5"
 
 import sys
 import os
@@ -24,6 +24,7 @@ import stat
 import datetime
 import platform
 import binascii
+import shutil
 from prettytable import PrettyTable
 
 def scan_path(path, rule_sets, num_first_bytes=6):
@@ -492,8 +493,16 @@ def save_stats(no_empty=False, identifier="yarAnalyzer", excel_patch=False):
                                                                             "-",
                                                                             excel_addon
                                                                             ))
+                    # Copy action
+                    if args.t:
+                        source_file = os.path.join(args.p, relPath)
+                        target_file = os.path.join(args.t, os.path.basename(relPath))
+                        print "[+] Copying sample with not match to {0}".format(target_file)
+                        shutil.copyfile(source_file, target_file)
 
             except Exception,e:
+                if args.debug:
+                    traceback.print_exc()
                 print "Error while formatting line - skipping it - CSV results may be incomplete"
 
     with open("{0}_rule_stats.csv".format(identifier), "w") as r_file:
@@ -527,11 +536,15 @@ def save_stats(no_empty=False, identifier="yarAnalyzer", excel_patch=False):
 
 def print_welcome():
     print "======================================================================="
-    print "  "
-    print "  yarAnalyzer"
+    print "                       ___                __                      "
+    print "     __  ______ ______/   |  ____  ____ _/ /_  ______  ___  _____ "
+    print "    / / / / __ `/ ___/ /| | / __ \/ __ `/ / / / /_  / / _ \/ ___/ "
+    print "   / /_/ / /_/ / /  / ___ |/ / / / /_/ / / /_/ / / /_/  __/ /     "
+    print "   \__, /\__,_/_/  /_/  |_/_/ /_/\__,_/_/\__, / /___/\___/_/      "
+    print "  /____/                                /____/                    "
     print "  "
     print "  by Florian Roth"
-    print "  January 2016"
+    print "  December 2016"
     print "  Version %s" % __version__
     print "  "
     print "======================================================================="
@@ -551,6 +564,7 @@ if __name__ == '__main__':
     parser.add_argument('-l', help='Max filename/rulename string length in command line output', metavar='max-string', default=30)
     parser.add_argument('-f', help='Number of first bytes to show in output', metavar='first-bytes', default=6)
     parser.add_argument('-o', help='Inventory output', metavar='output', default='yara-rule-inventory.csv')
+    parser.add_argument('-t', help='Target directory for samples without matches', metavar='output-samples', default='')
     parser.add_argument('--excel', action='store_true', default=False, help='Add extras to suppress automatic conversion in Microsoft Excel')
     parser.add_argument('--noempty', action='store_true', default=False, help='Don\'t show empty values')
     parser.add_argument('--inventory', action='store_true', default=False, help='Create a YARA rule inventory only')
