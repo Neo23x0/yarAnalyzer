@@ -497,7 +497,7 @@ def save_stats(no_empty=False, identifier="yarAnalyzer", excel_patch=False):
                     if args.t:
                         source_file = os.path.join(args.p, relPath)
                         target_file = os.path.join(args.t, os.path.basename(relPath))
-                        print "[+] Copying sample with not match to {0}".format(target_file)
+                        print "[+] Copying sample with no match to {0}".format(target_file)
                         shutil.copyfile(source_file, target_file)
 
             except Exception,e:
