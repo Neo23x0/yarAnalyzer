@@ -60,4 +60,8 @@ optional arguments:
 
 # DO NOT
 
-install the outdated "yara" Python module via pip. Use "yara-python" instead or install it from the github repo: [https://github.com/plusvic/yara-python](https://github.com/plusvic/yara-python)
+install the outdated "yara" Python module via pip.
+
+# DO
+
+Use "yara-python" instead. You can also install "yara-python" from the github repo: [https://github.com/plusvic/yara-python](https://github.com/plusvic/yara-python)
