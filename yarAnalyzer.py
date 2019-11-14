@@ -10,7 +10,7 @@ Florian Roth
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-__version__ = "0.5"
+__version__ = "0.6"
 
 import sys
 import os
@@ -20,12 +20,11 @@ import traceback
 import yara
 import hashlib
 import re
-import stat
-import datetime
 import platform
-import binascii
 import shutil
+import string
 from prettytable import PrettyTable
+
 
 def scan_path(path, rule_sets, num_first_bytes=6):
 
@@ -72,7 +71,7 @@ def scan_path(path, rule_sets, num_first_bytes=6):
                 fileData = read_file_data(filePath)
 
                 if len(fileData) > 1:
-                    file_stats[relPath]["firstBytes_Hex"] = "%s" % fileData[:num_first_bytes].encode("hex")
+                    file_stats[relPath]["firstBytes_Hex"] = "%s" % fileData[:num_first_bytes].hex()
                     file_stats[relPath]["firstBytes_Ascii"] = "%s" % remove_non_ascii(fileData[:num_first_bytes])
                 else:
                     file_stats[relPath]["firstBytes_Hex"] = "-"
@@ -83,10 +82,10 @@ def scan_path(path, rule_sets, num_first_bytes=6):
                 file_stats[relPath]["sha1"] = sha1
                 file_stats[relPath]["sha256"] = sha256
 
-                log("DEBUG", "MD5: %s SHA1: %s SHA256: %s FILE: %s" % ( md5, sha1, sha256, filePath ))
+                log("DEBUG", "MD5: %s SHA1: %s SHA256: %s FILE: %s" % (md5, sha1, sha256, filePath))
 
                 if args.printAll:
-                    print "FILE: %s" % ( filePath )
+                    print("FILE: %s" % filePath)
 
                 # Yara Check -------------------------------------------------------
 
@@ -96,7 +95,7 @@ def scan_path(path, rule_sets, num_first_bytes=6):
 
                         # Yara Rule Match -------------------------------------
                         matches = rules.match(data=fileData,
-                                              externals= {
+                                              externals={
                                                   'filename': filename.lower(),
                                                   'filepath': filePath.lower()
                                               })
@@ -133,11 +132,11 @@ def scan_path(path, rule_sets, num_first_bytes=6):
                                     rule_stats[match.rule]["files"] = []
                                 rule_stats[match.rule]["files"].append(relPath)
 
-                except Exception, e:
+                except Exception as e:
                     if args.debug:
                         traceback.print_exc()
 
-            except Exception, e:
+            except Exception as e:
                 if args.debug:
                     traceback.print_exc()
 
@@ -148,7 +147,7 @@ def read_file_data(filePath):
         # Read file complete
         with open(filePath, 'rb') as f:
             fileData = f.read()
-    except Exception, e:
+    except Exception as e:
         log("DEBUG", "Cannot open file %s (access denied)" % filePath)
     finally:
         return fileData
@@ -163,7 +162,7 @@ def generate_hashes(filedata):
         sha1.update(filedata)
         sha256.update(filedata)
         return md5.hexdigest(), sha1.hexdigest(), sha256.hexdigest()
-    except Exception, e:
+    except Exception as e:
         traceback.print_exc()
         return 0, 0, 0
 
@@ -181,11 +180,11 @@ def get_string_matches(strings):
         string_num = 1
         for string in string_matches:
             # UNICDOE
-            if '\0' in string:
-                matching_strings += " Str" + str(string_num) + "(U): " + remove_non_ascii(remove_binary_zero(string))
+            if b'\x00' in string:
+                matching_strings += " Str" + str(string_num) + "(U): " + remove_binary_zero(string)
             else:
             # ASCII
-                matching_strings += " Str" + str(string_num) + "(A): " + remove_non_ascii(remove_binary_zero(string))
+                matching_strings += " Str" + str(string_num) + "(A): " + remove_binary_zero(string)
             string_num += 1
 
         # Limit string
@@ -252,17 +251,17 @@ def initialize_yara_rules(rule_path, rules_extension):
 
                                 yara_rules.append(compiledRules)
                                 log("INFO", "Initialized Yara rules from %s" % file)
-                            except Exception, e:
+                            except Exception as e:
                                 log("ERROR", "Error in Yara file: %s" % file)
                                 if args.debug:
                                     traceback.print_exc()
 
-                    except Exception, e:
+                    except Exception as e:
                         log("ERROR", "Error reading signature file %s ERROR: %s" % yaraRuleFile)
                         if args.debug:
                             traceback.print_exc()
 
-        except Exception, e:
+        except Exception as e:
             log("ERROR", "Error reading signature folder /signatures/")
             if args.debug:
                 traceback.print_exc()
@@ -276,7 +275,7 @@ def initialize_yara_rules(rule_path, rules_extension):
                                           })
             yara_rules.append(compiledRules)
             log("INFO", "Initialized Yara rules from %s" % rule_path)
-        except Exception, e:
+        except Exception as e:
             log("ERROR", "Error in Yara file: %s" % rule_path)
             if args.debug:
                 traceback.print_exc()
@@ -301,7 +300,7 @@ def generate_yara_inventory(output_file, yara_rule_infos):
                     description = description.replace("; ", " / ").replace(";", " ")
                     reference = reference.replace("; ", " / ").replace(";", " ")
                     output.write("{0};{1};{2};{3};\n".format(rule_file, rule_name, description, reference))
-    except Exception, e:
+    except Exception as e:
         traceback.print_exc()
 
 
@@ -313,8 +312,15 @@ def generate_yara_stats_structure(yara_rules):
             rule_stats[rule.identifier]["count"] = 0
 
 
-def remove_binary_zero(string):
-    return re.sub(r'\x00','',string)
+def remove_binary_zero(s):
+    new_bytes = []
+    for cb in s:
+        if cb != 0:
+            new_bytes.append(chr(cb))
+        else:
+            new_bytes.append(chr(32))  # space
+    # print("'%s'" % ''.join(new_bytes))
+    return ''.join(new_bytes)
 
 
 def get_application_path():
@@ -331,14 +337,10 @@ def get_application_path():
             pass
         if application_path == "":
             application_path = os.path.dirname(os.path.realpath(__file__))
-        if "~" in application_path and not isLinux:
-            # print "Trying to translate"
-            # print application_path
-            application_path = win32api.GetLongPathName(application_path)
         #if args.debug:
         #    log("DEBUG", "Application Path: %s" % application_path)
         return application_path
-    except Exception, e:
+    except Exception as e:
         log("ERROR","Error while evaluation of application path")
 
 
@@ -347,39 +349,23 @@ def log(mes_type, message):
     if not args.debug and mes_type == "DEBUG":
         return
 
-    # Prepare Message
-    orig_message = message
-    message = remove_non_ascii(message)
-
-    print "[%s]: %s" % (mes_type, message)
+    print("[%s]: %s" % (mes_type, message))
 
 
-def remove_non_ascii(string, stripit=False):
+def remove_non_ascii(s):
     nonascii = "error"
-
     try:
-        try:
-            # Handle according to the type
-            if isinstance(string, unicode) and not stripit:
-                nonascii = string.encode('unicode-escape')
-            elif isinstance(string, str) and not stripit:
-                nonascii = string.decode('utf-8', 'replace').encode('unicode-escape')
+        new_bytes = []
+        for cb in s:
+            if cb > 31 and cb < 127:
+                new_bytes.append(chr(cb))
             else:
-                try:
-                    nonascii = string.encode('raw_unicode_escape')
-                except Exception, e:
-                    nonascii = str("%s" % string)
-
-        except Exception, e:
-            # traceback.print_exc()
-            # print "All methods failed - removing characters"
-            # Generate a new string without disturbing characters
-            nonascii = "".join(i for i in string if ord(i)<127 and ord(i)>31)
-
-    except Exception, e:
+                new_bytes.append(chr(32))  # space
+        #print("'%s'" % ''.join(new_bytes))
+        nonascii = ''.join(new_bytes)
+    except Exception as e:
         traceback.print_exc()
         pass
-
     return nonascii
 
 
@@ -387,7 +373,7 @@ def get_platform_full():
     type_info = ""
     try:
         type_info = "%s PROC: %s ARCH: %s" % ( " ".join(platform.win32_ver()), platform.processor(), " ".join(platform.architecture()))
-    except Exception, e:
+    except Exception as e:
         type_info = " ".join(platform.win32_ver())
     return type_info
 
@@ -411,14 +397,14 @@ def pretty_print(no_empty=False, max_string=26):
         rules = "\n".join(rule[:max_string] for rule in file_stats[relPath]["matches"])
 
         x.add_row([
-            remove_non_ascii(relPath[:max_string]),
+            relPath[:max_string],
             file_stats[relPath]["size"],
             file_stats[relPath]["firstBytes_Hex"],
             file_stats[relPath]["firstBytes_Ascii"],
             rules
         ])
 
-    print x # get_string(sortby="File")
+    print(x) # get_string(sortby="File")
 
     x = PrettyTable(["Rule", "Match Count", "Files"])
     x.padding_width = 1
@@ -434,14 +420,14 @@ def pretty_print(no_empty=False, max_string=26):
         rule_name = rule[:max_string]
 
         # Add line
-        files = "\n".join(remove_non_ascii(file[:max_string]) for file in rule_stats[rule]["files"])
+        files = "\n".join(file[:max_string] for file in rule_stats[rule]["files"])
 
         x.add_row([
             rule_name,
             len(rule_stats[rule]["files"]),
             files
         ])
-    print x
+    print(x)
 
 
 def save_stats(no_empty=False, identifier="yarAnalyzer", excel_patch=False):
@@ -497,13 +483,13 @@ def save_stats(no_empty=False, identifier="yarAnalyzer", excel_patch=False):
                     if args.t:
                         source_file = os.path.join(args.p, relPath)
                         target_file = os.path.join(args.t, os.path.basename(relPath))
-                        print "[+] Copying sample with no match to {0}".format(target_file)
+                        print("[+] Copying sample with no match to {0}".format(target_file))
                         shutil.copyfile(source_file, target_file)
 
-            except Exception,e:
+            except Exception as e:
                 if args.debug:
                     traceback.print_exc()
-                print "Error while formatting line - skipping it - CSV results may be incomplete"
+                print("Error while formatting line - skipping it - CSV results may be incomplete")
 
     with open("{0}_rule_stats.csv".format(identifier), "w") as r_file:
 
@@ -530,25 +516,25 @@ def save_stats(no_empty=False, identifier="yarAnalyzer", excel_patch=False):
                 else:
                     r_file.write("{0};{1};{2};{3};{4};{5}\n".format(rule,len(rule_stats[rule]["files"]),"-","-","-","-"))
 
-            except Exception,e:
-                print "Error while formatting line - skipping it - CSV results may be incomplete"
+            except Exception as e:
+                print("Error while formatting line - skipping it - CSV results may be incomplete")
 
 
 def print_welcome():
-    print "======================================================================="
-    print "                       ___                __                      "
-    print "     __  ______ ______/   |  ____  ____ _/ /_  ______  ___  _____ "
-    print "    / / / / __ `/ ___/ /| | / __ \/ __ `/ / / / /_  / / _ \/ ___/ "
-    print "   / /_/ / /_/ / /  / ___ |/ / / / /_/ / / /_/ / / /_/  __/ /     "
-    print "   \__, /\__,_/_/  /_/  |_/_/ /_/\__,_/_/\__, / /___/\___/_/      "
-    print "  /____/                                /____/                    "
-    print "  "
-    print "  by Florian Roth"
-    print "  December 2016"
-    print "  Version %s" % __version__
-    print "  "
-    print "======================================================================="
-    print "  "
+    print("=======================================================================")
+    print("                       ___                __                      ")
+    print("     __  ______ ______/   |  ____  ____ _/ /_  ______  ___  _____ ")
+    print("    / / / / __ `/ ___/ /| | / __ \/ __ `/ / / / /_  / / _ \/ ___/ ")
+    print("   / /_/ / /_/ / /  / ___ |/ / / / /_/ / / /_/ / / /_/  __/ /     ")
+    print("   \__, /\__,_/_/  /_/  |_/_/ /_/\__,_/_/\__, / /___/\___/_/      ")
+    print("  /____/                                /____/                    ")
+    print("  ")
+    print("  by Florian Roth")
+    print("  November 2019")
+    print("  Version %s" % __version__)
+    print("  ")
+    print("=======================================================================")
+    print("  ")
 
 
 # MAIN ################################################################
@@ -556,16 +542,20 @@ if __name__ == '__main__':
 
     # Parse Arguments
     parser = argparse.ArgumentParser(description='yarAnalyzer - Yara Rules Statistics and Analysis')
-    parser.add_argument('-p', help='Path to scan', metavar='path', default='C:\\')
+    parser.add_argument('-p', help='Path with samples files', metavar='path', default='C:\\')
     parser.add_argument('-s', help='Path to signature file(s)', metavar='sigpath', default="{0}".format(os.path.join(get_application_path(), './signatures')))
     parser.add_argument('-e', help='signature extension', metavar='ext', default='yar')
-    parser.add_argument('-i', help='Set an identifier - will be used in filename identifier_rule_stats.csv and identifier_file_stats.csv', metavar='identifier', default='yarAnalyzer')
+    parser.add_argument('-i', help='Set an identifier - will be used in filename identifier_rule_stats.csv and'
+                                   ' identifier_file_stats.csv', metavar='identifier', default='yarAnalyzer')
     parser.add_argument('-m', help='Max file size in MB (default=10)', metavar='max-size', default=10)
-    parser.add_argument('-l', help='Max filename/rulename string length in command line output', metavar='max-string', default=30)
+    parser.add_argument('-l', help='Max filename/rulename string length in command line output', metavar='max-string',
+                        default=30)
     parser.add_argument('-f', help='Number of first bytes to show in output', metavar='first-bytes', default=6)
     parser.add_argument('-o', help='Inventory output', metavar='output', default='yara-rule-inventory.csv')
-    parser.add_argument('-t', help='Target directory for samples without matches', metavar='output-samples', default='')
-    parser.add_argument('--excel', action='store_true', default=False, help='Add extras to suppress automatic conversion in Microsoft Excel')
+    parser.add_argument('-t', help='Target directory to which samples without matches should be copied',
+                        metavar='output-samples', default='')
+    parser.add_argument('--excel', action='store_true', default=False,
+                        help='Add extras to suppress automatic conversion in Microsoft Excel')
     parser.add_argument('--noempty', action='store_true', default=False, help='Don\'t show empty values')
     parser.add_argument('--inventory', action='store_true', default=False, help='Create a YARA rule inventory only')
     parser.add_argument('--printAll', action='store_true', help='Print all files that are scanned', default=False)
@@ -575,15 +565,15 @@ if __name__ == '__main__':
 
     # Error
     if not args.inventory and not args.p:
-        print "[Error] At least one basic function must be used! Use either '-p' to scan a certain directory or " \
-              "'--inventory' to generate a rule inventory (of directory set with -s)."
+        print("[Error] At least one basic function must be used! Use either '-p' to scan a certain directory or " \
+              "'--inventory' to generate a rule inventory (of directory set with -s).")
         parser.print_help()
 
     # Print Welcome ---------------------------------------------------
     print_welcome()
     try:
         t_hostname = os.environ['COMPUTERNAME']
-    except Exception, e:
+    except Exception as e:
         t_hostname = os.uname()[1]
 
     # Compile Yara Rules
