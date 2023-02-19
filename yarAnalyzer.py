@@ -481,7 +481,8 @@ def save_stats(no_empty=False, identifier="yarAnalyzer", excel_patch=False):
                                                                             ))
                     # Copy action
                     if args.t:
-                        source_file = os.path.join(args.p, relPath)
+                        # workaround: .lstrip('/') because e.g. os.path.join('/tmp','/x') gives just '/x' without /tmp and that occurs if args.p doesn't end with a / (however)
+                        source_file = os.path.join(args.p, relPath.lstrip('/'))
                         target_file = os.path.join(args.t, os.path.basename(relPath))
                         print("[+] Copying sample with no match to {0}".format(target_file))
                         shutil.copyfile(source_file, target_file)
@@ -549,7 +550,7 @@ if __name__ == '__main__':
                                    ' identifier_file_stats.csv', metavar='identifier', default='yarAnalyzer')
     parser.add_argument('-m', help='Max file size in MB (default=10)', metavar='max-size', default=10)
     parser.add_argument('-l', help='Max filename/rulename string length in command line output', metavar='max-string',
-                        default=30)
+                        default=60)
     parser.add_argument('-f', help='Number of first bytes to show in output', metavar='first-bytes', default=6)
     parser.add_argument('-o', help='Inventory output', metavar='output', default='yara-rule-inventory.csv')
     parser.add_argument('-t', help='Target directory to which samples without matches should be copied',
