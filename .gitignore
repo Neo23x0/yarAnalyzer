@@ -13,3 +13,6 @@ signatures/*.yar
 yara-rule-inventory.csv
 
 *.xlsx
+*.sh
+*.swp
+tmp*
